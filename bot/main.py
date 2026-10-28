@@ -5,7 +5,7 @@ Bekleyen mesajları sırayla işler:
   /giris  → Bilibili QR girişi (login_flow)
   /durum  → Bilibili oturum durumu
   /iptal, /yardim, diğerleri → kısa cevaplar
-Bir iş bittikten sonra kısa bir süre (varsayılan 3 dk) yeni komut bekler;
+Bir iş bittikten sonra bir süre (varsayılan 15 dk) yeni komut bekler;
 gelmezse kapanır. Böylece arka arkaya birkaç video beklemeden yüklenebilir.
 """
 
