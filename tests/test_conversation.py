@@ -168,3 +168,22 @@ def test_commands_are_not_saved_as_title(tmp_path):
     )
     assert ok and req.title == "Gerçek başlık"
     assert api.sent.count(M.COMMAND_IN_DIALOG) == 2
+
+
+def test_queued_messages_after_compressed_video_are_not_lost(tmp_path):
+    # Kullanıcı bot uyanmadan her şeyi sıraya koymuş, video "video" olarak gitmiş.
+    compressed = message(message_id=2, video={"file_id": "V", "file_unique_id": "u", "file_size": 1000})
+    ok, req, api, _ = run([compressed, message("Başlık"), message("/atla"), photo()], tmp_path, files={"big": png_bytes()})
+    assert ok and req.video.file_id == "V" and req.title == "Başlık" and req.description == ""
+    assert M.COMPRESSED_VIDEO in api.sent and M.NEED_VIDEO not in api.sent
+
+
+def test_devam_is_not_saved_as_tag(tmp_path):
+    ok, req, api, _ = run(
+        [video_doc(), message("T"), message("/atla"), photo(), message("/devam"), message("/atla")],
+        tmp_path,
+        files={"big": png_bytes()},
+        ask_tags=True,
+    )
+    assert ok and req.tags == ["MOD"]
+    assert M.COMMAND_IN_DIALOG in api.sent

@@ -56,7 +56,7 @@ COMPRESSED_VIDEO = (
     "⚠️ Bu video normal \"video\" olarak gönderilmiş. Telegram uygulaması bu şekilde "
     "gönderilen videoları sıkıştırır (çoğunlukla en fazla 720p–1080p, düşük bit hızı).\n"
     "Orijinal kalite için videoyu DOSYA olarak tekrar gönder.\n"
-    "Yine de bu haliyle yüklemek istersen /devam yaz."
+    "Yine de bu haliyle yüklemek istersen /devam yaz (ya da doğrudan başlığı yaz)."
 )
 NEED_MTPROTO = (
     "Bu video 20 MB'tan büyük. Büyük dosyaları indirebilmem için TELEGRAM_API_ID ve "

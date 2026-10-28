@@ -207,7 +207,7 @@ Kaliteyi belirleyen iki yer var:
    - **Android:** 📎 → **Dosya** → **Galeri** → videoyu seç; ya da galeride videoyu seçip ⋮ → **Sıkıştırmadan gönder**.
    - **iPhone:** 📎 → videoyu seç → ⋯ → **Dosya olarak gönder**. (Ağır çekim videolar yine sıkıştırılabilir.)
 
-   Video normal "video" olarak gelirse bot uyarır. Dosya olarak tekrar gönderebilir ya da `/devam` ile o haliyle yükleyebilirsin.
+   Video normal "video" olarak gelirse bot uyarır. Dosya olarak tekrar gönderebilir ya da `/devam` yazıp (veya doğrudan başlığı yazıp) o haliyle devam edebilirsin.
 2. **Bilibili'nin kendisi.** Bilibili yüklenen **her** videoyu kendi sunucusunda yeniden kodlar (转码压制); izleyiciye hiçbir zaman orijinal dosya gitmez. Bu bütün yüklemeler için geçerlidir, telefondan uygulamayla yüklesen bile. 1080P+, 60 fps, 4K ve HDR seçenekleri kaynak destekliyorsa oluşur ve izleyicilerden sadece **大会员** (premium) üyelere gösterilir. Yapılabilecek en iyi şey Bilibili'ye orijinal dosyayı vermektir; bot bunu yapar.
 
 ---

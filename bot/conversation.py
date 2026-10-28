@@ -26,8 +26,6 @@ MAX_TITLE_LENGTH = 80  # Bilibili sınırı
 MAX_DESCRIPTION_LENGTH = 2000  # Bilibili sınırı
 SKIP_COMMAND = "/atla"
 CONTINUE_COMMAND = "/devam"
-# Adımların kendisinin yorumladığı komutlar (diğer komutlar diyalogda reddedilir)
-STEP_COMMANDS = (SKIP_COMMAND, CONTINUE_COMMAND)
 CANCEL_COMMANDS = ("/iptal", "/cancel")
 
 VIDEO_EXTENSIONS = {
@@ -139,6 +137,19 @@ class Step(ABC):
     """Konuşmadaki bir soru. `accept` None dönerse cevap kabul edilmiştir;
     aksi halde dönen metin kullanıcıya gösterilir ve aynı adım tekrarlanır."""
 
+    # Bu adımın kendisinin yorumladığı komutlar; diğer komutlar diyalogda reddedilir.
+    commands: tuple[str, ...] = ()
+
+    def provisional(self) -> bool:
+        """Adım geçici bir cevapla doldu mu? (ör. onay bekleyen sıkıştırılmış video)
+        Öyleyse ve sıradaki mesaj bu adıma ait değilse, cevap onaylanmış sayılır ve
+        mesaj bir sonraki adıma geçer (önceden sıraya konmuş mesajlar kaybolmasın)."""
+        return False
+
+    def claims(self, message: dict[str, Any]) -> bool:
+        """Geçici durumdayken bu mesaj hâlâ bu adıma mı ait?"""
+        return True
+
     @abstractmethod
     def prompt(self, req: UploadRequest) -> str: ...
 
@@ -147,30 +158,38 @@ class Step(ABC):
 
 
 class VideoStep(Step):
+    commands = (CONTINUE_COMMAND,)
+
     def __init__(self) -> None:
-        self._compressed: MediaRef | None = None  # /devam onayı bekleyen sıkıştırılmış video
+        self._awaiting_confirmation = False  # sıkıştırılmış video için /devam bekleniyor
 
     def prompt(self, req: UploadRequest) -> str:
         return M.ASK_VIDEO
 
+    def provisional(self) -> bool:
+        return self._awaiting_confirmation
+
+    def claims(self, message: dict[str, Any]) -> bool:
+        return command_of(message) == CONTINUE_COMMAND or extract_video(message) is not None
+
     async def accept(self, message: dict[str, Any], req: UploadRequest, ctx: StepContext) -> str | None:
-        if command_of(message) == CONTINUE_COMMAND and self._compressed:
-            media = self._compressed  # kullanıcı sıkıştırılmış haliyle yüklemeyi onayladı
-        else:
-            media = extract_video(message)
-            if media is None:
+        if command_of(message) == CONTINUE_COMMAND:
+            if not self._awaiting_confirmation:
                 return M.NEED_VIDEO
-            if media.kind != "document":
-                # Telegram uygulaması "video" olarak gönderilen klipleri yeniden kodlar.
-                self._compressed = media
-                return M.COMPRESSED_VIDEO
+            self._awaiting_confirmation = False  # sıkıştırılmış haliyle yükleme onaylandı
+            return None
+        media = extract_video(message)
+        if media is None:
+            return M.NEED_VIDEO
         if media.needs_mtproto and not ctx.settings.mtproto_enabled:
             return M.NEED_MTPROTO
         free = shutil.disk_usage(ctx.session_dir).free
         if media.file_size and media.file_size * 1.05 > free:
             return M.NOT_ENOUGH_DISK.format(free=M.human_size(free))
         req.video = media
-        return None
+        # Telegram uygulaması "video" olarak gönderilen klipleri yeniden kodlar: uyar.
+        self._awaiting_confirmation = media.kind != "document"
+        return M.COMPRESSED_VIDEO if self._awaiting_confirmation else None
 
 
 class TextStep(Step):
@@ -179,6 +198,7 @@ class TextStep(Step):
         self._prompt = prompt
         self.max_length = max_length
         self.skippable = skippable
+        self.commands = (SKIP_COMMAND,) if skippable else ()
 
     def prompt(self, req: UploadRequest) -> str:
         return self._prompt.format(max=self.max_length)
@@ -244,6 +264,8 @@ class CoverStep(Step):
 
 
 class TidStep(Step):
+    commands = (SKIP_COMMAND,)
+
     def prompt(self, req: UploadRequest) -> str:
         return M.ASK_TID.format(default=req.tid)
 
@@ -258,6 +280,8 @@ class TidStep(Step):
 
 
 class TagsStep(Step):
+    commands = (SKIP_COMMAND,)
+
     def prompt(self, req: UploadRequest) -> str:
         return M.ASK_TAGS.format(max_tags=MAX_TAGS, max_len=MAX_TAG_LENGTH, default=", ".join(req.tags))
 
@@ -299,12 +323,16 @@ async def run_dialog(ctx: StepContext, steps: list[Step], req: UploadRequest, *,
     """
     bot = ctx.bot
     step_timeout = ctx.settings.step_timeout
+    carried: dict[str, Any] | None = None  # önceki adımdan bu adıma devreden mesaj
     for step in steps:
         await bot.say(step.prompt(req))
         while True:
-            budget = bot.deadline.remaining() - reserve
-            wait = min(step_timeout, budget)
-            message = await bot.inbox.next(timeout=wait) if wait > 0 else None
+            if carried is not None:
+                message, carried = carried, None
+            else:
+                budget = bot.deadline.remaining() - reserve
+                wait = min(step_timeout, budget)
+                message = await bot.inbox.next(timeout=wait) if wait > 0 else None
             if message is None:
                 if budget <= step_timeout:
                     await bot.say(M.RUN_BUDGET_EXHAUSTED)
@@ -317,7 +345,10 @@ async def run_dialog(ctx: StepContext, steps: list[Step], req: UploadRequest, *,
                 await bot.say(M.CANCELLED)
                 log.info("Yükleme kullanıcı tarafından iptal edildi.")
                 return False
-            if command and command not in STEP_COMMANDS:
+            if step.provisional() and not step.claims(message):
+                carried = message  # geçici cevap onaylandı; mesaj sıradaki adıma ait
+                break
+            if command and command not in step.commands:
                 await bot.say(M.COMMAND_IN_DIALOG)
                 continue
             error = await step.accept(message, req, ctx)
