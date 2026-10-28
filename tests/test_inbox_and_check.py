@@ -111,6 +111,15 @@ def test_check_reports_work(monkeypatch, tmp_path, updates, expected):
         assert calls == [None]  # mesajlara dokunulmadı
 
 
+def test_check_without_secrets_is_quiet(monkeypatch, tmp_path):
+    output = tmp_path / "out"
+    monkeypatch.setenv("GITHUB_OUTPUT", str(output))
+    monkeypatch.delenv("TELEGRAM_BOT_TOKEN", raising=False)
+    monkeypatch.delenv("ALLOWED_USER_ID", raising=False)
+    assert check.main() == 0
+    assert output.read_text().strip() == "has_work=false"
+
+
 def test_check_network_error_is_not_fatal(monkeypatch, tmp_path):
     output = tmp_path / "out"
     monkeypatch.setenv("GITHUB_OUTPUT", str(output))

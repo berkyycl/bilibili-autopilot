@@ -28,9 +28,14 @@ def main() -> int:
     token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
     allowed_raw = os.environ.get("ALLOWED_USER_ID", "").strip()
     if not token or not allowed_raw.lstrip("-").isdigit():
-        print("Ayar hatası: TELEGRAM_BOT_TOKEN ve ALLOWED_USER_ID secret'larını kontrol edin.")
+        # Kurulum henüz bitmemiş olabilir: her 5 dakikada kırmızı çalışma ve hata
+        # e-postası üretmemek için sadece uyarı verip başarılı çıkıyoruz.
+        print(
+            "::warning::TELEGRAM_BOT_TOKEN ve/veya ALLOWED_USER_ID secret'ı eksik ya da hatalı; "
+            "bot çalışmıyor. README'deki kurulum adımlarına bakın."
+        )
         _write_output(False)
-        return 1
+        return 0
     allowed_user_id = int(allowed_raw)
 
     try:
