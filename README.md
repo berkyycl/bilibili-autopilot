@@ -15,12 +15,13 @@ Mobil internetin bitse bile Telegram kullanımın kotandan düşmüyorsa (sını
 1. [Nasıl çalışır?](#nasıl-çalışır)
 2. [Kurulum (telefondan)](#kurulum-telefondan)
 3. [Kullanım](#kullanım)
-4. [Ayarlar (Variables)](#ayarlar-variables)
-5. [Otomatik oturum yenileme](#otomatik-oturum-yenileme)
-6. [60 gün kuralı ve keepalive](#60-gün-kuralı-ve-keepalive)
-7. [Güvenlik](#güvenlik)
-8. [Sık karşılaşılan sorunlar](#sık-karşılaşılan-sorunlar)
-9. [Proje yapısı](#proje-yapısı)
+4. [Video kalitesi](#video-kalitesi)
+5. [Ayarlar (Variables)](#ayarlar-variables)
+6. [Otomatik oturum yenileme](#otomatik-oturum-yenileme)
+7. [60 gün kuralı ve keepalive](#60-gün-kuralı-ve-keepalive)
+8. [Güvenlik](#güvenlik)
+9. [Sık karşılaşılan sorunlar](#sık-karşılaşılan-sorunlar)
+10. [Proje yapısı](#proje-yapısı)
 
 ---
 
@@ -163,13 +164,13 @@ Artık `/yukle` ile video yükleyebilirsin. 🎉
 ### Video yükleme
 
 1. Bota `/yukle` yaz.
-2. **"Videoyu gönder"** → videoyu gönder. En iyi kalite için 📎 → **Dosya** seçeneğiyle (sıkıştırmadan) gönder. 2 GB'a kadar.
+2. **"Videoyu gönder"** → videoyu **dosya olarak** gönder (2 GB'a kadar). Ayrıntılar için [Video kalitesi](#video-kalitesi) bölümüne bak.
 3. **"Başlığı yaz"** → başlığı yaz (en fazla 80 karakter).
 4. **"Açıklamayı yaz"** → açıklamayı yaz (en fazla 2000 karakter; istemiyorsan `/atla`).
 5. **"Kapak görselini gönder"** → fotoğraf ya da JPG/PNG dosyası gönder.
 6. Bot bir **özet** gösterir ve yüklemeye başlar; ilerlemeyi tek bir mesajı güncelleyerek gösterir:
    `⬇️ Video Telegram'dan indiriliyor… %42` → `⬆️ Bilibili'ye yükleniyor… %75`
-7. Bitince **Bilibili linkini** (`https://www.bilibili.com/video/BV...`) gönderir. Video, Bilibili incelemesinden (审核) geçtikten sonra herkese açık olur.
+7. Bitince **Bilibili linkini** (`https://www.bilibili.com/video/BV...`) ve gönderilen dosyanın **tam bayt sayısını** gönderir. Video, Bilibili incelemesinden (审核) geçtikten sonra herkese açık olur.
 
 İpuçları:
 - Bot uyanmadan önce videoyu ve bilgileri **sırayla önceden gönderebilirsin** (`/yukle` → video → başlık → açıklama → kapak). Bot uyanınca hepsini sırayla işler.
@@ -184,6 +185,7 @@ Artık `/yukle` ile video yükleyebilirsin. 🎉
 | `/durum` | Bilibili oturumunun geçerli olup olmadığını ve kalan süreyi gösterir |
 | `/iptal` | Her an, devam eden işlemi iptal eder (indirme/yükleme sırasında da) |
 | `/atla` | Açıklama adımını boş geçer |
+| `/devam` | Sıkıştırılmış ("video" olarak gönderilmiş) videoyu yine de yükler |
 | `/yardim` | Yardım mesajı |
 
 - Bir adımda **15 dakika** cevap vermezsen işlem zaman aşımıyla iptal olur ve bot sana haber verir.
@@ -192,6 +194,21 @@ Artık `/yukle` ile video yükleyebilirsin. 🎉
 ### Botu hemen uyandırmak
 
 GitHub mobil uygulaması (ya da tarayıcı) → depo → **Actions** → **Bilibili Bot** → **Run workflow**. Bot birkaç saniye içinde uyanıp bekleyen komutlarını işler.
+
+---
+
+## Video kalitesi
+
+Bot, Telegram'a gönderdiğin dosyayı **bayt bayt aynen** Bilibili'ye iletir. Hiçbir yerde yeniden kodlama yapılmaz. Telegram'dan inen dosyanın boyutu Telegram'daki boyutla karşılaştırılır; eksik inen bir video asla yüklenmez. Bitince gönderilen dosyanın tam bayt sayısı mesajda yazar; telefonundaki orijinalin boyutuyla karşılaştırabilirsin.
+
+Kaliteyi belirleyen iki yer var:
+
+1. **Telegram'a nasıl gönderdiğin.** Normal "video" olarak gönderirsen Telegram uygulaması videoyu göndermeden önce **sıkıştırır**. iPhone her zaman; Android neredeyse her zaman (en fazla 1080p, çoğunlukla 720p; düşük bit hızı, HDR kaybolur). Orijinal için **dosya olarak** gönder:
+   - **Android:** 📎 → **Dosya** → **Galeri** → videoyu seç; ya da galeride videoyu seçip ⋮ → **Sıkıştırmadan gönder**.
+   - **iPhone:** 📎 → videoyu seç → ⋯ → **Dosya olarak gönder**. (Ağır çekim videolar yine sıkıştırılabilir.)
+
+   Video normal "video" olarak gelirse bot uyarır. Dosya olarak tekrar gönderebilir ya da `/devam` ile o haliyle yükleyebilirsin.
+2. **Bilibili'nin kendisi.** Bilibili yüklenen **her** videoyu kendi sunucusunda yeniden kodlar (转码压制); izleyiciye hiçbir zaman orijinal dosya gitmez. Bu bütün yüklemeler için geçerlidir, telefondan uygulamayla yüklesen bile. 1080P+, 60 fps, 4K ve HDR seçenekleri kaynak destekliyorsa oluşur ve izleyicilerden sadece **大会员** (premium) üyelere gösterilir. Yapılabilecek en iyi şey Bilibili'ye orijinal dosyayı vermektir; bot bunu yapar.
 
 ---
 
@@ -299,7 +316,9 @@ Depo herkese açık olduğu için şu kurallar uygulanır:
 
 **Yükleme çok yavaş ya da "süre doldu".** Tek bir çalışma en fazla 120 dakika sürebilir. `BILI_LINE` variable'ıyla farklı bir yükleme hattı dene (ör. `bda2`, `tx`, `alia`).
 
-**Video kalitesi düşük.** Telegram'da videoyu "video" olarak gönderirsen Telegram sıkıştırabilir. 📎 → **Dosya** olarak gönder.
+**Video kalitesi düşük.** Telegram'da videoyu "video" olarak gönderirsen Telegram uygulaması videoyu sıkıştırır. **Dosya** olarak gönder ([Video kalitesi](#video-kalitesi)).
+
+**"Video eksik indirildi (boyut uyuşmuyor)".** Telegram'dan inen dosya beklenenden küçük geldi; bot yarım videoyu yüklemez. `/yukle` ile tekrar dene.
 
 **Videonun köşesinde "kullanıcı adı + bilibili" filigranı var.** Bu filigranı Bilibili ekler. Bot her yüklemede filigranı kapalı ister (`BILI_WATERMARK` ile açılabilir). Yine de görürsen Bilibili uygulamasında 创作中心 (Yaratıcı merkezi) → ayarlar → 水印设置 (filigran ayarı) bölümünden de kapat. Daha önce yüklenmiş videodaki filigran kalıcıdır; kaldırmak için videoyu yeniden yüklemek gerekir.
 

@@ -25,6 +25,9 @@ from bot.telegram import TelegramError
 MAX_TITLE_LENGTH = 80  # Bilibili sınırı
 MAX_DESCRIPTION_LENGTH = 2000  # Bilibili sınırı
 SKIP_COMMAND = "/atla"
+CONTINUE_COMMAND = "/devam"
+# Adımların kendisinin yorumladığı komutlar (diğer komutlar diyalogda reddedilir)
+STEP_COMMANDS = (SKIP_COMMAND, CONTINUE_COMMAND)
 CANCEL_COMMANDS = ("/iptal", "/cancel")
 
 VIDEO_EXTENSIONS = {
@@ -59,7 +62,7 @@ class StepContext:
 # --- Mesajlardan medya çıkarma ------------------------------------------------------
 
 
-def _media_ref(obj: dict[str, Any], message: dict[str, Any]) -> MediaRef:
+def _media_ref(obj: dict[str, Any], message: dict[str, Any], kind: str = "document") -> MediaRef:
     return MediaRef(
         file_id=obj["file_id"],
         file_unique_id=obj.get("file_unique_id", ""),
@@ -67,18 +70,22 @@ def _media_ref(obj: dict[str, Any], message: dict[str, Any]) -> MediaRef:
         message_id=message["message_id"],
         file_name=obj.get("file_name"),
         mime_type=obj.get("mime_type"),
+        kind=kind,
     )
 
 
 def extract_video(message: dict[str, Any]) -> MediaRef | None:
+    """Mesajdaki videoyu bulur. `kind` alanı, Telegram uygulamasının videoyu
+    sıkıştırmış olabileceği gönderimleri ("video", sessiz videolar için "animation") ayırır."""
     if message.get("video"):
-        return _media_ref(message["video"], message)
+        return _media_ref(message["video"], message, "video")
     document = message.get("document")
     if document:
         mime = (document.get("mime_type") or "").lower()
         suffix = Path(document.get("file_name") or "").suffix.lower()
         if mime.startswith("video/") or suffix in VIDEO_EXTENSIONS:
-            return _media_ref(document, message)
+            kind = "animation" if message.get("animation") else "document"
+            return _media_ref(document, message, kind)
     return None
 
 
@@ -140,13 +147,23 @@ class Step(ABC):
 
 
 class VideoStep(Step):
+    def __init__(self) -> None:
+        self._compressed: MediaRef | None = None  # /devam onayı bekleyen sıkıştırılmış video
+
     def prompt(self, req: UploadRequest) -> str:
         return M.ASK_VIDEO
 
     async def accept(self, message: dict[str, Any], req: UploadRequest, ctx: StepContext) -> str | None:
-        media = extract_video(message)
-        if media is None:
-            return M.NEED_VIDEO
+        if command_of(message) == CONTINUE_COMMAND and self._compressed:
+            media = self._compressed  # kullanıcı sıkıştırılmış haliyle yüklemeyi onayladı
+        else:
+            media = extract_video(message)
+            if media is None:
+                return M.NEED_VIDEO
+            if media.kind != "document":
+                # Telegram uygulaması "video" olarak gönderilen klipleri yeniden kodlar.
+                self._compressed = media
+                return M.COMPRESSED_VIDEO
         if media.needs_mtproto and not ctx.settings.mtproto_enabled:
             return M.NEED_MTPROTO
         free = shutil.disk_usage(ctx.session_dir).free
@@ -173,9 +190,12 @@ class TextStep(Step):
         text = message.get("text")
         if text is None:
             return M.NEED_TEXT
-        if self.skippable and command_of(message) == SKIP_COMMAND:
-            setattr(req, self.attr, "")
-            return None
+        command = command_of(message)
+        if command:
+            if self.skippable and command == SKIP_COMMAND:
+                setattr(req, self.attr, "")
+                return None
+            return M.COMMAND_IN_DIALOG  # "/atla" gibi bir komut başlık olarak kaydedilmesin
         value = self.clean(text)
         if not value:
             return M.EMPTY_TEXT
@@ -297,7 +317,7 @@ async def run_dialog(ctx: StepContext, steps: list[Step], req: UploadRequest, *,
                 await bot.say(M.CANCELLED)
                 log.info("Yükleme kullanıcı tarafından iptal edildi.")
                 return False
-            if command and command != SKIP_COMMAND:
+            if command and command not in STEP_COMMANDS:
                 await bot.say(M.COMMAND_IN_DIALOG)
                 continue
             error = await step.accept(message, req, ctx)
@@ -310,6 +330,7 @@ async def run_dialog(ctx: StepContext, steps: list[Step], req: UploadRequest, *,
 def summary(req: UploadRequest) -> str:
     return M.SUMMARY.format(
         size=M.human_size(req.video.file_size if req.video else None),
+        source=M.SOURCE_ORIGINAL if req.video and req.video.kind == "document" else M.SOURCE_COMPRESSED,
         title=req.title,
         description=M.shorten(req.description, 300) or "(yok)",
         tid=req.tid,

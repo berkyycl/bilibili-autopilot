@@ -36,9 +36,11 @@ BUSY = "⏳ Şu an bir işlem sürüyor. İptal etmek için /iptal yaz."
 # --- Yükleme konuşması ---------------------------------------------------------
 
 ASK_VIDEO = (
-    "🎬 Videoyu gönder.\n"
-    "En iyi kalite için 📎 → Dosya seçeneğiyle (sıkıştırmadan) gönder. En fazla 2 GB.\n"
-    "İptal için /iptal"
+    "🎬 Videoyu DOSYA olarak gönder (orijinal kalite için şart):\n"
+    "• Android: 📎 → Dosya → Galeri → videoyu seç\n"
+    "   (ya da galeride videoyu seçip ⋮ → Sıkıştırmadan gönder)\n"
+    "• iPhone: 📎 → videoyu seç → ⋯ → Dosya olarak gönder\n"
+    "En fazla 2 GB. İptal için /iptal"
 )
 ASK_TITLE = "📝 Başlığı yaz (en fazla {max} karakter)."
 ASK_DESCRIPTION = "📄 Açıklamayı yaz (en fazla {max} karakter). Açıklama istemiyorsan /atla yaz."
@@ -49,7 +51,13 @@ ASK_TAGS = (
     "{max_len} karakter). Varsayılanlar için /atla yaz: {default}"
 )
 
-NEED_VIDEO = "Bu bir video değil 🙂 Lütfen videoyu video ya da dosya olarak gönder."
+NEED_VIDEO = "Bu bir video değil 🙂 Lütfen videoyu dosya olarak gönder."
+COMPRESSED_VIDEO = (
+    "⚠️ Bu video normal \"video\" olarak gönderilmiş. Telegram uygulaması bu şekilde "
+    "gönderilen videoları sıkıştırır (çoğunlukla en fazla 720p–1080p, düşük bit hızı).\n"
+    "Orijinal kalite için videoyu DOSYA olarak tekrar gönder.\n"
+    "Yine de bu haliyle yüklemek istersen /devam yaz."
+)
 NEED_MTPROTO = (
     "Bu video 20 MB'tan büyük. Büyük dosyaları indirebilmem için TELEGRAM_API_ID ve "
     "TELEGRAM_API_HASH secret'larının tanımlı olması gerekiyor (README'ye bak)."
@@ -80,7 +88,7 @@ RUN_BUDGET_EXHAUSTED = (
 
 SUMMARY = (
     "📋 Özet\n"
-    "🎬 Video: {size}\n"
+    "🎬 Video: {size} ({source})\n"
     "📝 Başlık: {title}\n"
     "📄 Açıklama: {description}\n"
     "🖼 Kapak: hazır\n"
@@ -88,11 +96,14 @@ SUMMARY = (
     "🏷 Etiketler: {tags}\n\n"
     "Yükleme başlıyor… İptal için /iptal"
 )
+SOURCE_ORIGINAL = "dosya olarak, orijinal kalite"
+SOURCE_COMPRESSED = "sıkıştırılmış video"
 DOWNLOAD_STARTING = "⬇️ Video Telegram'dan indiriliyor…"
 UPLOAD_STARTING = "⬆️ Bilibili'ye yükleniyor…"
 UPLOAD_SUCCESS = (
     "✅ Video Bilibili'ye yüklendi!\n"
-    "🔗 https://www.bilibili.com/video/{bvid}\n\n"
+    "🔗 https://www.bilibili.com/video/{bvid}\n"
+    "📦 Gönderilen dosya: {size_bytes} bayt (telefonundaki orijinalle karşılaştırabilirsin)\n\n"
     "Not: Video, Bilibili incelemesinden (审核) geçtikten sonra herkese açık olur.\n"
     "Başka video için /yukle yazabilirsin."
 )
@@ -173,6 +184,11 @@ def human_size(num_bytes: float | None) -> str:
             return f"{size:.0f} {unit}" if unit in ("B", "KB") else f"{size:.1f} {unit}"
         size /= 1024
     return f"{size:.1f} GB"
+
+
+def exact_bytes(num_bytes: int) -> str:
+    """1234567 → '1.234.567' (Türkçe binlik ayırıcı)."""
+    return f"{num_bytes:,}".replace(",", ".")
 
 
 def human_duration(seconds: float) -> str:

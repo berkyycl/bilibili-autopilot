@@ -120,7 +120,8 @@ async def _transfer(ctx: BotContext, req: UploadRequest, session_dir: Path, cook
         log.info("Yükleme başarılı.")
         await status.show("✅ Tamamlandı.", force=True)
         if bvid:
-            await ctx.say(M.UPLOAD_SUCCESS.format(bvid=bvid), link_preview=True)
+            size_bytes = M.exact_bytes(video_path.stat().st_size)
+            await ctx.say(M.UPLOAD_SUCCESS.format(bvid=bvid, size_bytes=size_bytes), link_preview=True)
         else:
             await ctx.say(M.UPLOAD_SUCCESS_NO_BVID)
     except OperationCancelled as exc:

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 from pathlib import Path
 from typing import Any, Awaitable, Callable
 
@@ -158,17 +159,24 @@ class BotAPI:
             raise TelegramError("getFile", -1, "dosya yolu alınamadı")
         total = int(info.get("file_size") or 0)
         url = f"{API_BASE}/file/bot{self._token}/{file_path}"
+        # Önce geçici dosyaya yaz; sadece eksiksiz inerse asıl adına taşı.
+        part = dest.with_name(dest.name + ".part")
         done = 0
         try:
             async with self._client.stream("GET", url, timeout=httpx.Timeout(30.0, read=120.0)) as response:
                 if response.status_code != 200:
                     raise TelegramError("getFile", response.status_code, "dosya indirilemedi")
-                with open(dest, "wb") as fh:
+                with open(part, "wb") as fh:
                     async for chunk in response.aiter_bytes(256 * 1024):
                         fh.write(chunk)
                         done += len(chunk)
                         if progress:
                             await progress(done, total)
+            if total and done != total:
+                raise TelegramError("getFile", -1, "eksik indirme")
+            os.replace(part, dest)
         except httpx.TransportError:
             raise TelegramError("getFile", -1, "bağlantı koptu") from None
+        finally:
+            part.unlink(missing_ok=True)
         return dest

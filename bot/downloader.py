@@ -44,6 +44,9 @@ class MediaRef:
     message_id: int
     file_name: str | None = None
     mime_type: str | None = None
+    # "document": dosya olarak gönderildi (orijinal bayt); "video"/"animation":
+    # Telegram uygulaması göndermeden önce yeniden kodlamış olabilir.
+    kind: str = "document"
 
     @property
     def needs_mtproto(self) -> bool:
@@ -58,26 +61,45 @@ async def download(
     settings: Settings,
     progress: ProgressCallback | None = None,
 ) -> Path:
-    """Dosyayı uygun yöntemle `dest` yoluna indirir."""
+    """Dosyayı uygun yöntemle `dest` yoluna indirir ve Telegram'daki boyutla birebir aynı mı kontrol eder."""
     if not media.needs_mtproto:
         try:
-            return await api.download_file(media.file_id, dest, progress)
+            path = await api.download_file(media.file_id, dest, progress)
+            return verify_size(path, media.file_size)
         except TelegramError as exc:
             log.warning("Bot API ile indirme başarısız (%s).", describe(exc))
             if not settings.mtproto_enabled:
                 raise DownloadError("Telegram'dan dosya alınamadı") from None
     if not settings.mtproto_enabled:
         raise DownloadError("20 MB üstü dosyalar için TELEGRAM_API_ID ve TELEGRAM_API_HASH gerekli")
-    return await _download_mtproto(media, dest, settings, progress)
+    path, expected = await _download_mtproto(media, dest, settings, progress)
+    return verify_size(path, expected)
+
+
+def verify_size(path: Path, expected: int | None) -> Path:
+    """İnen dosya eksik/boş ise siler ve hata verir. Böylece yarım bir video asla yüklenmez."""
+    size = path.stat().st_size if path.exists() else 0
+    if size == 0 or (expected and size != expected):
+        path.unlink(missing_ok=True)
+        log.warning("İndirilen dosyanın boyutu beklenenle uyuşmuyor.")
+        raise DownloadError("Video eksik indirildi (boyut uyuşmuyor); tekrar dene")
+    return path
+
+
+def same_media(media: MediaRef, candidate: object) -> bool:
+    """Yeniden alınan mesajdaki dosya, kullanıcının gönderdiği dosyayla aynı mı?"""
+    return not media.file_unique_id or getattr(candidate, "file_unique_id", None) == media.file_unique_id
 
 
 async def _download_mtproto(
     media: MediaRef, dest: Path, settings: Settings, progress: ProgressCallback | None
-) -> Path:
+) -> tuple[Path, int | None]:
+    """(indirilen dosya, Telegram'a göre beklenen bayt sayısı) döndürür."""
     from pyrogram import Client, raw, utils
     from pyrogram.errors import AccessTokenInvalid, ApiIdInvalid, BadRequest, RPCError
 
     total = media.file_size or 0
+    expected = media.file_size
 
     async def on_progress(current: int, reported_total: int) -> None:
         if progress:
@@ -107,6 +129,10 @@ async def _download_mtproto(
                 message = next((m for m in messages if m and not getattr(m, "empty", False)), None)
                 if message is None:
                     raise DownloadError("Mesaj Telegram'da bulunamadı (silinmiş olabilir)") from None
+                found = message.video or message.document or message.animation
+                if found is None or not same_media(media, found):
+                    raise DownloadError("Mesajdaki video değişmiş; videoyu tekrar gönder") from None
+                expected = expected or getattr(found, "file_size", None)
                 result = await client.download_media(message, file_name=str(dest), progress=on_progress)
     except DownloadError:
         raise
@@ -120,4 +146,4 @@ async def _download_mtproto(
         raise DownloadError("Telegram bağlantısı koptu") from None
     if not result:
         raise DownloadError("İndirme tamamlanamadı")
-    return Path(str(result))
+    return Path(str(result)), expected

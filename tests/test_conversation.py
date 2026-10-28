@@ -132,3 +132,39 @@ def test_video_sent_as_video_and_suffix():
     doc = extract_video(video_doc(name="a.mkv", mime="application/octet-stream"))
     assert doc is not None and video_suffix(doc) == ".mkv"
     assert extract_video(message(document={"file_id": "x", "file_name": "a.pdf", "mime_type": "application/pdf"})) is None
+
+
+def test_compressed_video_needs_confirmation(tmp_path):
+    compressed = message(message_id=2, video={"file_id": "V", "file_unique_id": "u", "file_size": 1000, "mime_type": "video/mp4"})
+    ok, req, api, _ = run(
+        [compressed, message("/devam"), message("T"), message("/atla"), photo()],
+        tmp_path,
+        files={"big": png_bytes()},
+    )
+    assert ok and req.video.file_id == "V" and req.video.kind == "video"
+    assert M.COMPRESSED_VIDEO in api.sent
+    assert "sıkıştırılmış video" in summary(req)
+
+
+def test_resending_as_file_replaces_compressed_video(tmp_path):
+    compressed = message(message_id=2, video={"file_id": "V", "file_unique_id": "u", "file_size": 1000})
+    ok, req, _, _ = run([compressed, video_doc(message_id=3), message("T"), message("/atla"), photo()], tmp_path, files={"big": png_bytes()})
+    assert ok and req.video.file_id == "VID" and req.video.kind == "document"
+    assert "orijinal kalite" in summary(req)
+
+
+def test_muted_android_video_counts_as_compressed(tmp_path):
+    muted = video_doc()
+    muted["animation"] = dict(muted["document"])
+    ok, _, api, _ = run([muted], tmp_path)
+    assert not ok and M.COMPRESSED_VIDEO in api.sent
+
+
+def test_commands_are_not_saved_as_title(tmp_path):
+    ok, req, api, _ = run(
+        [video_doc(), message("/atla"), message("/devam"), message("Gerçek başlık"), message("/atla"), photo()],
+        tmp_path,
+        files={"big": png_bytes()},
+    )
+    assert ok and req.title == "Gerçek başlık"
+    assert api.sent.count(M.COMMAND_IN_DIALOG) == 2
