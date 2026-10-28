@@ -1,0 +1,50 @@
+# GitHub, herkese açık depolarda 60 gün boyunca hiç commit olmazsa zamanlanmış
+# (schedule) workflow'ları otomatik olarak devre dışı bırakır. Bu workflow her
+# hafta:
+#   1) Depodaki zamanlanmış workflow'ları GitHub API ile "etkin" olarak işaretler
+#      (devre dışı kalma sayacını sıfırlar; commit oluşturmaz).
+#   2) Ek güvence olarak son commit 45 günden eskiyse boş bir "keepalive" commit'i atar.
+name: Keepalive
+
+on:
+  schedule:
+    - cron: "41 4 * * 1" # her pazartesi 04:41 UTC
+  workflow_dispatch:
+
+permissions:
+  actions: write # workflow'ları etkinleştirmek için
+  contents: write # gerekirse boş commit atmak için
+
+concurrency:
+  group: keepalive
+  cancel-in-progress: false
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Kodu al
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Zamanlanmış workflow'ları etkin tut
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for wf in bot.yml renew.yml keepalive.yml; do
+            gh api --method PUT "repos/${GITHUB_REPOSITORY}/actions/workflows/${wf}/enable" \
+              && echo "${wf}: etkin" || echo "${wf}: etkinleştirilemedi"
+          done
+
+      - name: Gerekirse boş commit at
+        run: |
+          last_commit=$(git log -1 --format=%ct)
+          age_days=$(( ($(date +%s) - last_commit) / 86400 ))
+          echo "Son commit ${age_days} gün önce."
+          if [ "$age_days" -ge 45 ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit --allow-empty -m "chore: keepalive (zamanlanmış workflow'lar devre dışı kalmasın)"
+            git push
+            echo "Keepalive commit'i atıldı."
+          fi

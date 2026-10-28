@@ -1,0 +1,92 @@
+# Telegram botu: 5 dakikada bir uyanır, bekleyen komut yoksa birkaç saniyede kapanır.
+# Komut varsa (ör. /yukle) uyanık kalıp konuşmayı canlı yürütür ve yüklemeyi yapar.
+#
+# GÜVENLİK: Bu workflow sadece `schedule` ve `workflow_dispatch` ile tetiklenir.
+# pull_request / pull_request_target tetikleyicisi YOKTUR; fork'lardan gelen PR'lar
+# secret'lara erişemez.
+name: Bilibili Bot
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Aynı anda tek bir bot çalışır. Yeni çalışma, devam edeni iptal ETMEZ;
+# sırada bekler (sırada zaten bekleyen varsa onun yerini alır).
+concurrency:
+  group: bilibili-bot
+  cancel-in-progress: false
+
+jobs:
+  bot:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - name: Kodu al
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Telegram'ı kontrol et
+        id: check
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          ALLOWED_USER_ID: ${{ secrets.ALLOWED_USER_ID }}
+        run: python3 -m bot.check
+
+      - name: Python kur
+        if: steps.check.outputs.has_work == 'true'
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Bağımlılıkları kur
+        if: steps.check.outputs.has_work == 'true'
+        run: python -m pip install --disable-pip-version-check --quiet -r requirements.txt
+
+      - name: biliup kur
+        if: steps.check.outputs.has_work == 'true'
+        env:
+          BILIUP_VERSION: ${{ vars.BILIUP_VERSION || 'v1.3.4' }}
+          BILIUP_SHA256: ${{ vars.BILIUP_SHA256 }}
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/install_biliup.sh
+
+      - name: Botu çalıştır
+        id: run
+        if: steps.check.outputs.has_work == 'true'
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_API_ID: ${{ secrets.TELEGRAM_API_ID }}
+          TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
+          ALLOWED_USER_ID: ${{ secrets.ALLOWED_USER_ID }}
+          BILIBILI_COOKIES_B64: ${{ secrets.BILIBILI_COOKIES_B64 }}
+          GH_PAT: ${{ secrets.GH_PAT }}
+          BILI_TID: ${{ vars.BILI_TID }}
+          BILI_TAGS: ${{ vars.BILI_TAGS }}
+          BILI_LINE: ${{ vars.BILI_LINE }}
+          BILI_ASK_TID: ${{ vars.BILI_ASK_TID }}
+          BILI_ASK_TAGS: ${{ vars.BILI_ASK_TAGS }}
+          STEP_TIMEOUT_MINUTES: ${{ vars.STEP_TIMEOUT_MINUTES }}
+          IDLE_LINGER_SECONDS: ${{ vars.IDLE_LINGER_SECONDS }}
+          RUN_BUDGET_MINUTES: "110" # job timeout'u (120 dk) dolmadan kendimiz bitiririz
+          PYTHONUNBUFFERED: "1"
+        run: python -m bot.main
+
+      # Kurulum adımı başarısız olursa ya da süre dolarsa kullanıcıya haber ver ve
+      # bekleyen mesajları kuyruktan at (aksi halde her 5 dakikada aynı hata tekrarlanır).
+      # Botun kendi hataları bot.main tarafından zaten bildirilir.
+      - name: Hata bildir
+        if: (failure() || cancelled()) && steps.check.outputs.has_work == 'true' && steps.run.outcome != 'failure'
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          ALLOWED_USER_ID: ${{ secrets.ALLOWED_USER_ID }}
+        run: python3 -m bot.notify_failure
+
+      - name: Geçici dosyaları sil
+        if: always()
+        run: rm -rf "${RUNNER_TEMP}/bilibot" "${RUNNER_TEMP}/biliup-bin"

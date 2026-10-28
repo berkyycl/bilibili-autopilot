@@ -1,0 +1,7 @@
+# Çalışma zamanı bağımlılıkları (sürümler sabitlenmiştir).
+httpx==0.28.1              # Telegram Bot API, Bilibili ve GitHub API istekleri
+kurigram==2.2.26           # MTProto (bakımı süren Pyrogram fork'u): 20 MB üstü dosyaları indirmek için
+tgcrypto-pyrofork==1.2.8   # MTProto şifrelemesini hızlandırır (büyük dosyalarda şart)
+PyNaCl==1.6.2              # GitHub secret'ı libsodium sealed box ile şifrelemek için
+qrcode==8.2                # Bilibili giriş QR kodunu görsel olarak üretmek için
+pillow==12.3.0             # QR görseli ve kapak görselini JPEG'e çevirmek için

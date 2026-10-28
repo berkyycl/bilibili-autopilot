@@ -1,0 +1,45 @@
+# --- GİZLİ / KİŞİSEL DOSYALAR: ASLA COMMIT'LEME ---
+cookies.json
+*cookies*.json
+*.session
+*.session-journal
+qrcode.png
+.env
+.env.*
+
+# --- İndirilen medya ve geçici dosyalar ---
+downloads/
+work/
+tmp/
+*.mp4
+*.mkv
+*.mov
+*.flv
+*.avi
+*.webm
+*.m4v
+*.wmv
+*.mpg
+*.mpeg
+*.3gp
+*.jpg
+*.jpeg
+*.png
+*.webp
+*.part
+*.temp
+*.tmp
+cover_source
+
+# --- biliup programı ---
+biliup
+biliupR-*/
+biliupR-*.tar.xz
+biliup.log
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/

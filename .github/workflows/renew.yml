@@ -1,0 +1,62 @@
+# Bilibili oturumunu günde bir kez kontrol eder; süresi yaklaşıyorsa yeniler ve
+# yeni çerezi BILIBILI_COOKIES_B64 secret'ına yazar. Oturum tamamen geçersizse
+# Telegram'dan "/giris yapman gerekiyor" mesajı gönderir.
+name: Bilibili Oturum Yenileme
+
+on:
+  schedule:
+    - cron: "17 3 * * *" # her gün 03:17 UTC (06:17 TSİ)
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Süresine bakmadan şimdi yenile"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# Bot ile aynı grup: çerez secret'ı aynı anda iki yerden değiştirilmesin.
+concurrency:
+  group: bilibili-bot
+  cancel-in-progress: false
+
+jobs:
+  renew:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Kodu al
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Python kur
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Bağımlılıkları kur
+        run: python -m pip install --disable-pip-version-check --quiet -r requirements.txt
+
+      - name: biliup kur
+        env:
+          BILIUP_VERSION: ${{ vars.BILIUP_VERSION || 'v1.3.4' }}
+          BILIUP_SHA256: ${{ vars.BILIUP_SHA256 }}
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/install_biliup.sh
+
+      - name: Oturumu kontrol et ve gerekirse yenile
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          ALLOWED_USER_ID: ${{ secrets.ALLOWED_USER_ID }}
+          BILIBILI_COOKIES_B64: ${{ secrets.BILIBILI_COOKIES_B64 }}
+          GH_PAT: ${{ secrets.GH_PAT }}
+          FORCE_RENEW: ${{ inputs.force }}
+          PYTHONUNBUFFERED: "1"
+        run: python -m bot.renew
+
+      - name: Geçici dosyaları sil
+        if: always()
+        run: rm -rf "${RUNNER_TEMP}/bilibot" "${RUNNER_TEMP}/biliup-bin"
