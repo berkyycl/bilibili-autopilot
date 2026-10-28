@@ -27,6 +27,9 @@ def update(update_id, msg):
 def test_command_of():
     assert command_of(message("/yukle@BenimBotum ekstra")) == "/yukle"
     assert command_of(message("/IPTAL")) == "/iptal"
+    assert command_of(message("/giriş")) == "/giris"
+    assert command_of(message("/Yükle")) == "/yukle"
+    assert command_of(message("/yardım")) == "/yardim"
     assert command_of(message("merhaba")) is None
     assert command_of(message(None, photo=[{}])) is None
 

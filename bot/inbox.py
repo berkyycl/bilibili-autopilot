@@ -21,12 +21,16 @@ from bot.telegram import BotAPI, TelegramError
 LONG_POLL_MAX = 50  # saniye
 
 
+# Türkçe klavyeyle yazılan komutlar da anlaşılsın: /giriş → /giris, /yükle → /yukle
+_TURKISH = str.maketrans("çğıöşüÇĞİÖŞÜ", "cgiosucgiosu")
+
+
 def command_of(message: dict[str, Any]) -> str | None:
     """Mesaj bir komutsa ('/yukle@BotAdi' gibi) normalleştirilmiş halini ('/yukle') döndürür."""
     text = (message.get("text") or "").strip()
     if not text.startswith("/"):
         return None
-    return text.split()[0].split("@")[0].lower()
+    return text.split()[0].split("@")[0].translate(_TURKISH).lower()
 
 
 def is_authorized(message: dict[str, Any], allowed_user_id: int) -> bool:
