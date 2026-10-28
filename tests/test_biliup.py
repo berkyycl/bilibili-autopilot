@@ -66,6 +66,7 @@ def test_build_upload_args_protects_leading_dash(tmp_path):
         cover_path=tmp_path / "cover.jpg",
         line="bda2",
     )
+    assert '--extra-fields={"watermark": {"state": 0}}' in args
     assert args[0] == "upload"
     assert "--title=-v bir başlık" in args
     assert "--desc=satır1\nsatır2" in args

@@ -21,6 +21,7 @@ def make_settings(tmp_path: Path, **overrides: Any) -> Settings:
         bili_tid=17,
         bili_tags=("MOD",),
         bili_line=None,
+        bili_watermark=False,
         ask_tid=False,
         ask_tags=False,
         step_timeout=900.0,

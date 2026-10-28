@@ -205,6 +205,7 @@ Depo → Settings → Secrets and variables → Actions → **Variables** sekmes
 | `BILI_TAGS` | `MOD,模组,游戏` | Virgülle ayrılmış etiketler (en fazla 12, her biri en fazla 20 karakter) |
 | `BILI_ASK_TID` | `false` | `true` yaparsan bot her yüklemede kategoriyi de sorar |
 | `BILI_ASK_TAGS` | `false` | `true` yaparsan bot her yüklemede etiketleri de sorar |
+| `BILI_WATERMARK` | `false` | `true` yaparsan Bilibili videonun köşesine kullanıcı adı + bilibili logosu filigranını ekler |
 | `BILI_LINE` | (otomatik) | Yükleme hattı. Yükleme yavaşsa dene: `bda2`, `bldsa`, `tx`, `txa`, `alia` |
 | `STEP_TIMEOUT_MINUTES` | `15` | Bir adımda cevap için beklenecek süre (dakika) |
 | `IDLE_LINGER_SECONDS` | `180` | Bir iş bittikten sonra yeni komut için bekleme süresi (saniye; `0` = hemen kapan) |
@@ -299,6 +300,8 @@ Depo herkese açık olduğu için şu kurallar uygulanır:
 **Yükleme çok yavaş ya da "süre doldu".** Tek bir çalışma en fazla 120 dakika sürebilir. `BILI_LINE` variable'ıyla farklı bir yükleme hattı dene (ör. `bda2`, `tx`, `alia`).
 
 **Video kalitesi düşük.** Telegram'da videoyu "video" olarak gönderirsen Telegram sıkıştırabilir. 📎 → **Dosya** olarak gönder.
+
+**Videonun köşesinde "kullanıcı adı + bilibili" filigranı var.** Bu filigranı Bilibili ekler. Bot her yüklemede filigranı kapalı ister (`BILI_WATERMARK` ile açılabilir). Yine de görürsen Bilibili uygulamasında 创作中心 (Yaratıcı merkezi) → ayarlar → 水印设置 (filigran ayarı) bölümünden de kapat. Daha önce yüklenmiş videodaki filigran kalıcıdır; kaldırmak için videoyu yeniden yüklemek gerekir.
 
 **Kapak reddedildi.** Yatay (16:9 ya da 16:10), en az 960×600 piksel bir JPG/PNG dene.
 

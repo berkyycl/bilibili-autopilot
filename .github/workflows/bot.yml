@@ -69,6 +69,7 @@ jobs:
           BILI_TID: ${{ vars.BILI_TID }}
           BILI_TAGS: ${{ vars.BILI_TAGS }}
           BILI_LINE: ${{ vars.BILI_LINE }}
+          BILI_WATERMARK: ${{ vars.BILI_WATERMARK }}
           BILI_ASK_TID: ${{ vars.BILI_ASK_TID }}
           BILI_ASK_TAGS: ${{ vars.BILI_ASK_TAGS }}
           STEP_TIMEOUT_MINUTES: ${{ vars.STEP_TIMEOUT_MINUTES }}

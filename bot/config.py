@@ -73,6 +73,7 @@ class Settings:
     bili_tid: int
     bili_tags: tuple[str, ...]
     bili_line: str | None
+    bili_watermark: bool  # Bilibili'nin "kullanıcı adı + logo" filigranı
     ask_tid: bool
     ask_tags: bool
     step_timeout: float  # saniye
@@ -120,6 +121,7 @@ def load_settings() -> Settings:
         bili_tid=_env_int("BILI_TID", DEFAULT_TID),
         bili_tags=tuple(tags[:MAX_TAGS]),
         bili_line=_env("BILI_LINE").lower() or None,
+        bili_watermark=_env_bool("BILI_WATERMARK"),
         ask_tid=_env_bool("BILI_ASK_TID"),
         ask_tags=_env_bool("BILI_ASK_TAGS"),
         step_timeout=60.0 * _env_int("STEP_TIMEOUT_MINUTES", DEFAULT_STEP_TIMEOUT_MINUTES),

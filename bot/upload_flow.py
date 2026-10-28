@@ -102,6 +102,7 @@ async def _transfer(ctx: BotContext, req: UploadRequest, session_dir: Path, cook
             tags=req.tags,
             cover_path=req.cover_path,
             line=ctx.settings.bili_line,
+            watermark=ctx.settings.bili_watermark,
         )
         async with ProgressTicker(
             status, lambda done, total, elapsed: M.progress_line(M.UPLOAD_STARTING, done, total, elapsed), 10.0

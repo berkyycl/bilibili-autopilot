@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import asyncio
 import fcntl
+import json
 import os
 import pty
 import re
@@ -254,6 +255,7 @@ def build_upload_args(
     tags: list[str],
     cover_path: Path | None,
     line: str | None,
+    watermark: bool = False,
 ) -> list[str]:
     """`biliup upload` argümanları. Kullanıcı metinleri '--ad=değer' biçiminde verilir ki
     '-' ile başlayan bir başlık bayrak sanılmasın."""
@@ -270,5 +272,8 @@ def build_upload_args(
         args.append(f"--cover={cover_path}")
     if line:
         args.append(f"--line={line}")
+    # Bilibili, hesabın filigran ayarı açıksa videonun köşesine "kullanıcı adı + logo"
+    # ekler. Durumu her yüklemede açıkça gönderiyoruz (0 = filigran yok).
+    args.append(f"--extra-fields={json.dumps({'watermark': {'state': 1 if watermark else 0}})}")
     args += ["--", str(video_path)]
     return args
