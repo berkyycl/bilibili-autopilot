@@ -173,7 +173,7 @@ Artık `/yukle` ile video yükleyebilirsin. 🎉
 
 İpuçları:
 - Bot uyanmadan önce videoyu ve bilgileri **sırayla önceden gönderebilirsin** (`/yukle` → video → başlık → açıklama → kapak). Bot uyanınca hepsini sırayla işler.
-- Bir iş (yükleme, giriş vb.) bitince bot **15 dakika daha** açık kalır ve komutlarına anında cevap verir; arka arkaya video yüklerken tekrar uyanmasını beklemen gerekmez.
+- Bir yükleme bitince bot **3 dakika daha** yeni komut bekler; arka arkaya video yüklerken tekrar uyanmasını beklemen gerekmez.
 
 ### Komutlar
 
@@ -207,7 +207,7 @@ Depo → Settings → Secrets and variables → Actions → **Variables** sekmes
 | `BILI_ASK_TAGS` | `false` | `true` yaparsan bot her yüklemede etiketleri de sorar |
 | `BILI_LINE` | (otomatik) | Yükleme hattı. Yükleme yavaşsa dene: `bda2`, `bldsa`, `tx`, `txa`, `alia` |
 | `STEP_TIMEOUT_MINUTES` | `15` | Bir adımda cevap için beklenecek süre (dakika) |
-| `IDLE_LINGER_SECONDS` | `900` | Bir iş bittikten sonra yeni komut için bekleme süresi (saniye; `0` = hemen kapan) |
+| `IDLE_LINGER_SECONDS` | `180` | Bir iş bittikten sonra yeni komut için bekleme süresi (saniye; `0` = hemen kapan) |
 | `BILIUP_VERSION` | `v1.3.4` | Kullanılacak [biliup release](https://github.com/biliup/biliup/releases) sürümü |
 | `BILIUP_SHA256` | (GitHub'dan) | İsteğe bağlı: biliup arşivinin beklenen SHA-256 özeti |
 

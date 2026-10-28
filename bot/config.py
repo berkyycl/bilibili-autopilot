@@ -17,7 +17,7 @@ DEFAULT_TID = 17  # Bilibili "单机游戏" (tek oyunculu oyunlar) kategorisi
 DEFAULT_TAGS = ("MOD", "模组", "游戏")
 DEFAULT_STEP_TIMEOUT_MINUTES = 15
 DEFAULT_RUN_BUDGET_MINUTES = 110  # job timeout'u (120 dk) dolmadan önce kendimiz bitiririz
-DEFAULT_IDLE_LINGER_SECONDS = 900  # bir işten sonra 15 dk yeni komut bekle
+DEFAULT_IDLE_LINGER_SECONDS = 180
 
 # Bilibili sınırları
 MAX_TAGS = 12
